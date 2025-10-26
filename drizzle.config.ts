@@ -8,5 +8,5 @@ export default {
   dbCredentials: {
     url: env.DATABASE_URL,
   },
-  tablesFilter: ["read-it-later_*"],
+  tablesFilter: ["ep_reader_*"],
 } satisfies Config;

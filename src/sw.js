@@ -1,10 +1,9 @@
 // @ts-nocheck
-const CACHE_NAME = "read-it-later-v1";
+const CACHE_NAME = "ep-reader-v1";
 const STATIC_CACHE_URLS = [
   "/",
-  "/search",
-  "/components",
-  "/offline",
+  "/library",
+  "/settings",
   "/favicon.ico",
   "/favicon-96x96.png",
   "/web-app-manifest-192x192.png",
@@ -118,7 +117,7 @@ self.addEventListener("push", (event) => {
   if (event.data) {
     const data = event.data.json();
     const options = {
-      body: data.body || "New article saved!",
+      body: data.body || "New release available!",
       icon: "/web-app-manifest-192x192.png",
       badge: "/favicon-96x96.png",
       vibrate: [100, 50, 100],
@@ -130,7 +129,7 @@ self.addEventListener("push", (event) => {
 
     event.waitUntil(
       self.registration.showNotification(
-        data.title || "Read It Later",
+        data.title || "EP-Reader",
         options,
       ),
     );

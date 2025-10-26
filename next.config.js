@@ -4,6 +4,14 @@
  */
 import "./src/env.js";
 
+const withPWA = require('next-pwa')({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development',
+  buildExcludes: [/middleware-manifest\.json$/],
+});
+
 /** @type {import("next").NextConfig} */
 const config = {
   eslint: {
@@ -71,18 +79,4 @@ const config = {
   },
 };
 
-export default config;
-
-// const withPWA = require('next-pwa')({
-//   dest: 'public', // Destination directory for PWA files
-//   register: true, // Register the service worker
-//   skipWaiting: true, // Skip waiting for service worker activation
-//   disable: process.env.NODE_ENV === 'development', // Disable PWA in development
-// });
-
-// /** @type {import('next').NextConfig} */
-// const nextConfig = {
-//   // Your existing Next.js configuration
-// };
-
-// module.exports = withPWA(nextConfig);
+export default withPWA(config);

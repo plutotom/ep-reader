@@ -6,11 +6,14 @@ import { Geist } from "next/font/google";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
-  title: "Template App",
-  description: "A clean template built with Next.js, tRPC, Drizzle ORM, and Shadcn/ui",
+  title: "EP-Reader",
+  description: "Read books in digestible chunks with scheduled releases",
   icons: [
     { rel: "icon", url: "/favicon.ico" },
   ],
+  manifest: "/manifest.json",
+  themeColor: "#000000",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
 };
 
 const geist = Geist({
