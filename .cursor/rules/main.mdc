@@ -1,0 +1,70 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+This is using create-t3-app.
+
+The project is a job board for companies to post jobs and candidates to apply.
+
+The project is using Next.js, Shadcn UI, Tailwind CSS, and TypeScript.
+
+The project is using the following technologies:
+
+- Next.js https://nextjs.org/docs/getting-started/installation
+- Shadcn UI
+- Tailwind CSS
+- TypeScript
+- Drizzle ORM https://orm.drizzle.team/docs/overview
+- BetterAuth https://www.better-auth.com/llms.txt
+- tRPC
+
+## Folder Structure
+
+.
+├─ public
+│ └─ favicon.ico
+├─ src
+│ ├─ app
+│ │ ├─ \_components
+│ │ │ └─ post.tsx
+│ │ ├─ api
+│ │ │ │ └─ route.ts
+│ │ │ └─ trpc
+│ │ │ └─ [trpc]
+│ │ │ └─ route.ts
+│ │ ├─ layout.tsx
+│ │ └─ page.tsx
+│ ├─ server
+│ │ ├─ auth.ts
+│ │ ├─ db
+│ │ │ ├─ index.ts
+│ │ │ └─ schema.ts
+│ │ └─ api
+│ │ ├─ routers
+│ │ │ └─ example.ts
+│ │ ├─ trpc.ts
+│ │ └─ root.ts
+│ ├─ styles
+│ │ └─ globals.css
+│ ├─ env.js
+│ └─ trpc
+│ ├─ query-client.ts
+│ ├─ react.tsx
+│ └─ server.ts
+├─ .env
+├─ .env.example
+├─ .eslintrc.cjs
+├─ .gitignore
+├─ db.sqlite (after `db:push`, sqlite only)
+├─ drizzle.config.ts
+├─ next-env.d.ts
+├─ next.config.js
+├─ package.json
+├─ postcss.config.js
+├─ prettier.config.js
+├─ README.md
+├─ start-database.sh (mysql or postgres only)
+├─ tailwind.config.ts
+└─ tsconfig.json
