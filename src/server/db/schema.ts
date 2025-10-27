@@ -57,7 +57,10 @@ export const bookSections = createTable(
   "book_section",
   (d) => ({
     id: d.uuid().primaryKey().defaultRandom(),
-    bookId: d.uuid().notNull().references(() => books.id, { onDelete: "cascade" }),
+    bookId: d
+      .uuid()
+      .notNull()
+      .references(() => books.id, { onDelete: "cascade" }),
     chapterNumber: d.integer().notNull(),
     sectionNumber: d.integer().notNull(),
     title: d.text().notNull(),
@@ -83,7 +86,10 @@ export const releaseSchedules = createTable(
   "release_schedule",
   (d) => ({
     id: d.uuid().primaryKey().defaultRandom(),
-    bookId: d.uuid().notNull().references(() => books.id, { onDelete: "cascade" }),
+    bookId: d
+      .uuid()
+      .notNull()
+      .references(() => books.id, { onDelete: "cascade" }),
     scheduleType: d.text().notNull(), // daily, weekly, custom
     daysOfWeek: d.text().notNull(), // JSON array: [1,2,3,4,5]
     releaseTime: d.time().notNull(),
@@ -110,7 +116,10 @@ export const releases = createTable(
   "release",
   (d) => ({
     id: d.uuid().primaryKey().defaultRandom(),
-    bookId: d.uuid().notNull().references(() => books.id, { onDelete: "cascade" }),
+    bookId: d
+      .uuid()
+      .notNull()
+      .references(() => books.id, { onDelete: "cascade" }),
     sectionIds: d.text().notNull(), // JSON array of section IDs
     scheduledFor: d.timestamp({ withTimezone: true }).notNull(),
     releasedAt: d.timestamp({ withTimezone: true }),
@@ -133,10 +142,19 @@ export const readingProgress = createTable(
   (d) => ({
     id: d.uuid().primaryKey().defaultRandom(),
     userId: d.text().notNull(),
-    bookId: d.uuid().notNull().references(() => books.id, { onDelete: "cascade" }),
-    sectionId: d.uuid().notNull().references(() => bookSections.id, { onDelete: "cascade" }),
+    bookId: d
+      .uuid()
+      .notNull()
+      .references(() => books.id, { onDelete: "cascade" }),
+    sectionId: d
+      .uuid()
+      .notNull()
+      .references(() => bookSections.id, { onDelete: "cascade" }),
     releaseId: d.uuid().references(() => releases.id, { onDelete: "cascade" }),
-    progressPercentage: d.numeric(5, 2).notNull().default("0.00"),
+    progressPercentage: d
+      .numeric("progress_percentage", { precision: 5, scale: 2 })
+      .notNull()
+      .default("0.00"),
     lastParagraphIndex: d.integer().notNull().default(0),
     isRead: d.boolean().notNull().default(false),
     readAt: d.timestamp({ withTimezone: true }),
@@ -159,6 +177,7 @@ export const readingProgress = createTable(
 );
 
 // User settings table
+
 export const userSettings = createTable(
   "user_setting",
   (d) => ({
@@ -177,7 +196,5 @@ export const userSettings = createTable(
       .$onUpdate(() => new Date())
       .notNull(),
   }),
-  (t) => [
-    index("user_settings_user_id_idx").on(t.userId),
-  ],
+  (t) => [index("user_settings_user_id_idx").on(t.userId)],
 );

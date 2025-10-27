@@ -22,24 +22,29 @@ export interface ParsedBook {
 }
 
 export class EpubParsingService {
-  private parser: EpubParser;
-
-  constructor() {
-    this.parser = new EpubParser();
-  }
-
   async parseEpub(filePath: string): Promise<ParsedBook> {
     try {
+      // Create parser instance for this file
+      const parser = new EpubParser(filePath);
       // Parse the EPUB file
-      const book = await this.parser.parse(filePath);
+      const book = await parser.parse();
       
-      // Extract metadata
-      const title = book.metadata.title || "Untitled";
-      const author = book.metadata.creator || book.metadata.author;
-      const coverImage = book.metadata.cover;
+      // Extract metadata from top-level fields
+      const title = book.titles?.[0] || "Untitled";
+      const author = book.creators?.[0]?.name || book.creators?.[0] || undefined;
+      const coverImage = book.cover?.href || undefined;
 
       // Parse content sections
       const sections = await this.parseContentSections(book);
+      
+      console.log("Parsed sections count:", sections.length);
+      console.log("Total chapters:", this.countChapters(sections));
+      
+      // Log what's in book.items to understand the structure
+      if (book.items) {
+        console.log("book.items keys:", Object.keys(book.items).slice(0, 10));
+        console.log("First item in book.items:", book.items[Object.keys(book.items)[0]]);
+      }
 
       return {
         title,
@@ -61,12 +66,37 @@ export class EpubParsingService {
     let chapterNumber = 1;
     let sectionNumber = 1;
 
-    // Get all spine items (chapters)
-    const spineItems = book.spine || [];
+    // Try to get items from the book
+    let itemsToProcess: any[] = [];
     
-    for (const item of spineItems) {
-      const content = await this.extractContent(item);
-      if (!content) continue;
+    // First, try spines
+    if (book.spines && book.spines.length > 0) {
+      console.log("Using spines, count:", book.spines.length);
+      itemsToProcess = book.spines;
+    } 
+    // If no spines, try all items and filter for HTML content
+    else if (book.items) {
+      console.log("No spines, using items");
+      const items = Object.values(book.items);
+      // Filter to only HTML/XHTML items
+      itemsToProcess = items.filter((item: any) => 
+        item.mediaType === 'application/xhtml+xml' || 
+        item.mediaType === 'text/html' ||
+        item.href?.endsWith('.html') ||
+        item.href?.endsWith('.xhtml')
+      );
+      console.log("Filtered items count:", itemsToProcess.length);
+    }
+    
+    // Process each item
+    for (const item of itemsToProcess) {
+      console.log("Processing item:", typeof item, Object.keys(item || {}));
+      const content = await this.extractContent(item, book);
+      if (!content) {
+        console.log("Failed to extract content from item");
+        continue;
+      }
+      console.log("Extracted content length:", content.length);
 
       // Parse HTML content
       const dom = new JSDOM(content);
@@ -140,17 +170,155 @@ export class EpubParsingService {
     return sections;
   }
 
-  private async extractContent(item: any): Promise<string | null> {
+  private async extractContent(item: any, book?: any): Promise<string | null> {
     try {
-      // Extract content from spine item
+      // If item is already a string (content)
       if (typeof item === 'string') {
         return item;
       }
       
-      if (item && item.content) {
-        return item.content;
+      // Log the structure to understand what we have
+      console.log("Item type:", typeof item);
+      console.log("Item keys:", item ? Object.keys(item) : 'null');
+      console.log("Item structure:", JSON.stringify(item, null, 2).substring(0, 500));
+      
+      // Try to read content using different methods
+      if (item && typeof item === 'object') {
+        // Log ALL methods/properties on the item
+        const itemMethods = Object.getOwnPropertyNames(item).filter(name => typeof item[name] === 'function');
+        console.log("Item has these methods:", itemMethods);
+        
+        // First, try to get content using the item ID from book.items
+        if (book?.items && item.id) {
+          console.log("Looking up item in book.items with ID:", item.id);
+          const contentItem = book.items[item.id];
+          console.log("Found item in book.items:", contentItem ? Object.keys(contentItem) : 'not found');
+          
+          // If found, log its methods too
+          if (contentItem) {
+            const contentItemMethods = Object.getOwnPropertyNames(contentItem).filter(name => typeof contentItem[name] === 'function');
+            console.log("ContentItem has these methods:", contentItemMethods);
+          }
+          
+          if (contentItem) {
+            // Try different ways to get the content
+            if (typeof contentItem === 'string') {
+              console.log("Got content from book.items[id] as string");
+              return contentItem;
+            }
+            
+            if (contentItem.read) {
+              try {
+                const readResult = await contentItem.read();
+                console.log("Got content from contentItem.read()");
+                return typeof readResult === 'string' ? readResult : readResult?.toString();
+              } catch (readErr) {
+                console.log("contentItem.read() failed:", readErr);
+              }
+            }
+            
+            if (contentItem.file) {
+              try {
+                const file = await contentItem.file();
+                const text = await file.text();
+                console.log("Got content from contentItem.file().text()");
+                return text;
+              } catch (fileErr) {
+                console.log("contentItem.file() failed:", fileErr);
+              }
+            }
+            
+            // Try buffer
+            if (contentItem.buffer) {
+              console.log("Got content from contentItem.buffer");
+              return contentItem.buffer.toString('utf-8');
+            }
+          }
+        }
+        
+        // Try reading the item itself using different possible methods
+        if (typeof item.read === 'function') {
+          try {
+            const result = await item.read();
+            console.log("Got content from item.read(), type:", typeof result);
+            if (typeof result === 'string') {
+              return result;
+            }
+            if (result?.toString) {
+              return result.toString();
+            }
+            if (Buffer.isBuffer(result)) {
+              return result.toString('utf-8');
+            }
+          } catch (readError) {
+            console.log("item.read() failed:", readError);
+          }
+        }
+        
+        // Try item directly as content
+        if (item.data) {
+          console.log("Got content from item.data");
+          return typeof item.data === 'string' ? item.data : item.data.toString();
+        }
+        
+        // Try item as a Buffer
+        if (Buffer.isBuffer(item)) {
+          console.log("Got content from item as Buffer");
+          return item.toString('utf-8');
+        }
+        
+        // Try book.getContent if available
+        if (book?.getContent && item.href) {
+          try {
+            const content = await book.getContent(item.href);
+            console.log("Got content from book.getContent()");
+            return content;
+          } catch (getContentError) {
+            console.log("book.getContent() failed:", getContentError);
+          }
+        }
+        
+        // Try different possible content locations
+        if (item.content && typeof item.content === 'string') {
+          console.log("Got content from item.content");
+          return item.content;
+        }
+        
+        if (item.text && typeof item.text === 'string') {
+          console.log("Got content from item.text");
+          return item.text;
+        }
+        
+        if (item.html && typeof item.html === 'string') {
+          console.log("Got content from item.html");
+          return item.html;
+        }
+        
+        // Try to get content from buffer
+        if (item.buffer) {
+          if (typeof item.buffer === 'string') {
+            console.log("Got content from item.buffer (string)");
+            return item.buffer;
+          }
+          if (Buffer.isBuffer(item.buffer)) {
+            console.log("Got content from item.buffer (Buffer)");
+            return item.buffer.toString('utf-8');
+          }
+        }
+        
+        // Try to access body if it's an element-like object
+        if (item.body) {
+          console.log("Got content from item.body");
+          return item.body;
+        }
+        
+        // Try href property - might need to fetch it
+        if (item.href) {
+          console.log("Item has href:", item.href);
+        }
       }
       
+      console.log("Could not extract content from item");
       return null;
     } catch (error) {
       console.error("Error extracting content:", error);

@@ -12,9 +12,9 @@ import { ArrowLeft, Calendar, Clock, Save } from "lucide-react";
 import Link from "next/link";
 
 interface SchedulePageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 const DAYS_OF_WEEK = [
@@ -38,26 +38,36 @@ export default function SchedulePage({ params }: SchedulePageProps) {
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([1, 2, 3, 4, 5]);
   const [releaseTime, setReleaseTime] = useState("09:00");
   const [sectionsPerRelease, setSectionsPerRelease] = useState(1);
+  const [bookId, setBookId] = useState<string>("");
+  const [isParamsReady, setIsParamsReady] = useState(false);
+
+  // Wait for params to be resolved (Next.js 15 async params)
+  useEffect(() => {
+    params.then((resolvedParams) => {
+      setBookId(resolvedParams.id);
+      setIsParamsReady(true);
+    });
+  }, [params]);
 
   const { data: book } = api.book.getBook.useQuery(
-    { bookId: params.id, userId: "" }, // We'll get userId from context
-    { enabled: !!params.id }
+    { bookId, userId: "" }, // We'll get userId from context
+    { enabled: !!bookId }
   );
 
   const { data: existingSchedule } = api.schedule.getSchedule.useQuery(
-    { bookId: params.id },
-    { enabled: !!params.id }
+    { bookId },
+    { enabled: !!bookId }
   );
 
   const createScheduleMutation = api.schedule.createSchedule.useMutation({
     onSuccess: () => {
-      window.location.href = `/book/${params.id}`;
+      window.location.href = `/book/${bookId}`;
     },
   });
 
   const updateScheduleMutation = api.schedule.updateSchedule.useMutation({
     onSuccess: () => {
-      window.location.href = `/book/${params.id}`;
+      window.location.href = `/book/${bookId}`;
     },
   });
 
@@ -103,7 +113,7 @@ export default function SchedulePage({ params }: SchedulePageProps) {
     }
 
     const scheduleData = {
-      bookId: params.id,
+      bookId,
       scheduleType,
       daysOfWeek,
       releaseTime,
@@ -141,6 +151,17 @@ export default function SchedulePage({ params }: SchedulePageProps) {
     return preview;
   };
 
+  if (!isParamsReady) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -148,7 +169,7 @@ export default function SchedulePage({ params }: SchedulePageProps) {
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" asChild>
-              <Link href={`/book/${params.id}`}>
+              <Link href={`/book/${bookId}`}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Book
               </Link>

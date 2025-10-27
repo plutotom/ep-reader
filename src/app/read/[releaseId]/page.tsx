@@ -18,12 +18,22 @@ import {
 import Link from "next/link";
 
 interface ReadingPageProps {
-  params: {
+  params: Promise<{
     releaseId: string;
-  };
+  }>;
 }
 
 export default function ReadingPage({ params }: ReadingPageProps) {
+  // Wait for params to be resolved (Next.js 15 async params)
+  const [releaseId, setReleaseId] = useState<string>("");
+  const [isParamsReady, setIsParamsReady] = useState(false);
+
+  useEffect(() => {
+    params.then((resolvedParams) => {
+      setReleaseId(resolvedParams.releaseId);
+      setIsParamsReady(true);
+    });
+  }, [params]);
   const { userId, isLoading: userIdLoading } = useUserId();
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
 
@@ -33,7 +43,7 @@ export default function ReadingPage({ params }: ReadingPageProps) {
     { enabled: !!userId }
   );
 
-  const currentRelease = releases?.find(r => r.id === params.releaseId);
+  const currentRelease = releases?.find(r => r.id === releaseId);
 
   // Get sections for current release
   const { data: sections, isLoading: sectionsLoading } = api.book.getBook.useQuery(
@@ -60,7 +70,7 @@ export default function ReadingPage({ params }: ReadingPageProps) {
       } else {
         // All sections read, mark release as read
         markReleaseReadMutation.mutate({
-          releaseId: params.releaseId,
+          releaseId,
           userId: userId || "",
         });
       }
@@ -78,7 +88,7 @@ export default function ReadingPage({ params }: ReadingPageProps) {
   const { scrollToLastParagraph } = useProgressTracking({
     userId: userId || "",
     sectionId: currentSection?.id || "",
-    releaseId: params.releaseId,
+    releaseId,
     content: currentSection?.content || "",
   });
 
@@ -97,7 +107,7 @@ export default function ReadingPage({ params }: ReadingPageProps) {
     markSectionReadMutation.mutate({
       userId,
       sectionId: currentSection.id,
-      releaseId: params.releaseId,
+      releaseId,
     });
   };
 
@@ -113,7 +123,7 @@ export default function ReadingPage({ params }: ReadingPageProps) {
     }
   };
 
-  if (userIdLoading || sectionsLoading) {
+  if (userIdLoading || sectionsLoading || !isParamsReady) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">

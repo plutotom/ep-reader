@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api } from "~/trpc/react";
 import { useUserId } from "~/hooks/use-user-id";
 import { Button } from "~/components/ui/button";
@@ -21,28 +21,38 @@ import {
 import Link from "next/link";
 
 interface BookDetailPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default function BookDetailPage({ params }: BookDetailPageProps) {
   const { userId, isLoading: userIdLoading } = useUserId();
   const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [bookId, setBookId] = useState<string>("");
+  const [isParamsReady, setIsParamsReady] = useState(false);
+
+  // Wait for params to be resolved (Next.js 15 async params)
+  useEffect(() => {
+    params.then((resolvedParams) => {
+      setBookId(resolvedParams.id);
+      setIsParamsReady(true);
+    });
+  }, [params]);
 
   const { data: book, isLoading: bookLoading } = api.book.getBook.useQuery(
-    { bookId: params.id, userId: userId || "" },
-    { enabled: !!userId }
+    { bookId, userId: userId || "" },
+    { enabled: !!userId && !!bookId }
   );
 
   const { data: schedule } = api.schedule.getSchedule.useQuery(
-    { bookId: params.id },
-    { enabled: !!params.id }
+    { bookId },
+    { enabled: !!bookId }
   );
 
   const { data: progress } = api.progress.getBookProgress.useQuery(
-    { userId: userId || "", bookId: params.id },
-    { enabled: !!userId && !!params.id }
+    { userId: userId || "", bookId },
+    { enabled: !!userId && !!bookId }
   );
 
   const deleteBookMutation = api.book.deleteBook.useMutation({
@@ -55,16 +65,16 @@ export default function BookDetailPage({ params }: BookDetailPageProps) {
   const handleDeleteBook = () => {
     if (!userId) return;
     if (confirm("Are you sure you want to delete this book? This action cannot be undone.")) {
-      deleteBookMutation.mutate({ bookId: params.id, userId });
+      deleteBookMutation.mutate({ bookId, userId });
     }
   };
 
   const handleStartReading = () => {
     // Redirect to reading page or show available releases
-    window.location.href = `/read/${params.id}`;
+    window.location.href = `/read/${bookId}`;
   };
 
-  if (userIdLoading || bookLoading) {
+  if (userIdLoading || bookLoading || !isParamsReady) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">

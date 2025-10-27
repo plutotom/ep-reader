@@ -32,20 +32,22 @@ export const bookRouter = createTRPCRouter({
           status: "ready",
         }).returning();
 
-        // Create book sections
-        const sectionsToInsert = parsedBook.sections.map(section => ({
-          bookId: book.id,
-          chapterNumber: section.chapterNumber,
-          sectionNumber: section.sectionNumber,
-          title: section.title,
-          content: section.content,
-          wordCount: section.wordCount,
-          estimatedReadTime: section.estimatedReadTime,
-          orderIndex: section.orderIndex,
-          headerLevel: section.headerLevel,
-        }));
+        // Create book sections (only if sections exist)
+        if (parsedBook.sections && parsedBook.sections.length > 0) {
+          const sectionsToInsert = parsedBook.sections.map(section => ({
+            bookId: book.id,
+            chapterNumber: section.chapterNumber,
+            sectionNumber: section.sectionNumber,
+            title: section.title,
+            content: section.content,
+            wordCount: section.wordCount,
+            estimatedReadTime: section.estimatedReadTime,
+            orderIndex: section.orderIndex,
+            headerLevel: section.headerLevel,
+          }));
 
-        await db.insert(bookSections).values(sectionsToInsert);
+          await db.insert(bookSections).values(sectionsToInsert);
+        }
 
         // Create user settings if they don't exist
         await db.insert(userSettings).values({
