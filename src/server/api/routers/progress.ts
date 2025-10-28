@@ -15,8 +15,19 @@ export const progressRouter = createTRPCRouter({
       lastParagraphIndex: z.number().min(0),
     }))
     .mutation(async ({ input }) => {
+      // Get the section to get bookId
+      const [section] = await db.select()
+        .from(bookSections)
+        .where(eq(bookSections.id, input.sectionId))
+        .limit(1);
+
+      if (!section) {
+        throw new Error("Section not found");
+      }
+
       const [progress] = await db.insert(readingProgress).values({
         userId: input.userId,
+        bookId: section.bookId,
         sectionId: input.sectionId,
         releaseId: input.releaseId,
         progressPercentage: input.progressPercentage.toString(),
@@ -63,8 +74,19 @@ export const progressRouter = createTRPCRouter({
       releaseId: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
+      // Get the section to get bookId
+      const [section] = await db.select()
+        .from(bookSections)
+        .where(eq(bookSections.id, input.sectionId))
+        .limit(1);
+
+      if (!section) {
+        throw new Error("Section not found");
+      }
+
       const [progress] = await db.insert(readingProgress).values({
         userId: input.userId,
+        bookId: section.bookId,
         sectionId: input.sectionId,
         releaseId: input.releaseId,
         progressPercentage: "100.00",

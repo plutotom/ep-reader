@@ -11,30 +11,43 @@ const epubParser = new EpubParsingService();
 export const bookRouter = createTRPCRouter({
   // Upload and parse a book
   uploadBook: publicProcedure
-    .input(z.object({
-      filePath: z.string(),
-      userId: z.string(),
-    }))
+    .input(
+      z.object({
+        filePath: z.string(),
+        userId: z.string(),
+      }),
+    )
     .mutation(async ({ input }) => {
       try {
         // Parse the EPUB file
         const parsedBook = await epubParser.parseEpub(input.filePath);
-        
+        console.log(
+          "parsedBook sections count in router:",
+          parsedBook.sections?.length,
+        );
+        console.log("parsedBook totalSections:", parsedBook.totalSections);
         // Create book record
-        const [book] = await db.insert(books).values({
-          userId: input.userId,
-          title: parsedBook.title,
-          author: parsedBook.author,
-          filePath: input.filePath,
-          coverImage: parsedBook.coverImage,
-          totalChapters: parsedBook.totalChapters,
-          totalSections: parsedBook.totalSections,
-          status: "ready",
-        }).returning();
+        const [book] = await db
+          .insert(books)
+          .values({
+            userId: input.userId,
+            title: parsedBook.title,
+            author: parsedBook.author,
+            filePath: input.filePath,
+            coverImage: parsedBook.coverImage,
+            totalChapters: parsedBook.totalChapters,
+            totalSections: parsedBook.totalSections,
+            status: "ready",
+          })
+          .returning();
+
+        if (!book) {
+          throw new Error("Failed to create book record");
+        }
 
         // Create book sections (only if sections exist)
         if (parsedBook.sections && parsedBook.sections.length > 0) {
-          const sectionsToInsert = parsedBook.sections.map(section => ({
+          const sectionsToInsert = parsedBook.sections.map((section) => ({
             bookId: book.id,
             chapterNumber: section.chapterNumber,
             sectionNumber: section.sectionNumber,
@@ -50,15 +63,20 @@ export const bookRouter = createTRPCRouter({
         }
 
         // Create user settings if they don't exist
-        await db.insert(userSettings).values({
-          userId: input.userId,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        }).onConflictDoNothing();
+        await db
+          .insert(userSettings)
+          .values({
+            userId: input.userId,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          })
+          .onConflictDoNothing();
 
         return book;
       } catch (error) {
         console.error("Error uploading book:", error);
-        throw new Error(`Failed to upload book: ${error instanceof Error ? error.message : "Unknown error"}`);
+        throw new Error(
+          `Failed to upload book: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
       }
     }),
 
@@ -66,29 +84,34 @@ export const bookRouter = createTRPCRouter({
   getBooks: publicProcedure
     .input(z.object({ userId: z.string() }))
     .query(async ({ input }) => {
-      return await db.select().from(books)
+      return await db
+        .select()
+        .from(books)
         .where(eq(books.userId, input.userId))
         .orderBy(desc(books.createdAt));
     }),
 
   // Get a single book with its sections
   getBook: publicProcedure
-    .input(z.object({ 
-      bookId: z.string(),
-      userId: z.string(),
-    }))
+    .input(
+      z.object({
+        bookId: z.string(),
+        userId: z.string(),
+      }),
+    )
     .query(async ({ input }) => {
-      const [book] = await db.select().from(books)
-        .where(and(
-          eq(books.id, input.bookId),
-          eq(books.userId, input.userId)
-        ));
+      const [book] = await db
+        .select()
+        .from(books)
+        .where(and(eq(books.id, input.bookId), eq(books.userId, input.userId)));
 
       if (!book) {
         throw new Error("Book not found");
       }
 
-      const sections = await db.select().from(bookSections)
+      const sections = await db
+        .select()
+        .from(bookSections)
         .where(eq(bookSections.bookId, input.bookId))
         .orderBy(bookSections.orderIndex);
 
@@ -100,28 +123,27 @@ export const bookRouter = createTRPCRouter({
 
   // Delete a book
   deleteBook: publicProcedure
-    .input(z.object({
-      bookId: z.string(),
-      userId: z.string(),
-    }))
+    .input(
+      z.object({
+        bookId: z.string(),
+        userId: z.string(),
+      }),
+    )
     .mutation(async ({ input }) => {
       // Get book to access file path
-      const [book] = await db.select().from(books)
-        .where(and(
-          eq(books.id, input.bookId),
-          eq(books.userId, input.userId)
-        ));
+      const [book] = await db
+        .select()
+        .from(books)
+        .where(and(eq(books.id, input.bookId), eq(books.userId, input.userId)));
 
       if (!book) {
         throw new Error("Book not found");
       }
 
       // Delete book (cascade will handle sections, schedules, etc.)
-      await db.delete(books)
-        .where(and(
-          eq(books.id, input.bookId),
-          eq(books.userId, input.userId)
-        ));
+      await db
+        .delete(books)
+        .where(and(eq(books.id, input.bookId), eq(books.userId, input.userId)));
 
       // Delete the file
       try {
@@ -136,18 +158,18 @@ export const bookRouter = createTRPCRouter({
 
   // Update book status
   updateBookStatus: publicProcedure
-    .input(z.object({
-      bookId: z.string(),
-      userId: z.string(),
-      status: z.enum(["processing", "ready", "active", "completed"]),
-    }))
+    .input(
+      z.object({
+        bookId: z.string(),
+        userId: z.string(),
+        status: z.enum(["processing", "ready", "active", "completed"]),
+      }),
+    )
     .mutation(async ({ input }) => {
-      const [book] = await db.update(books)
+      const [book] = await db
+        .update(books)
         .set({ status: input.status })
-        .where(and(
-          eq(books.id, input.bookId),
-          eq(books.userId, input.userId)
-        ))
+        .where(and(eq(books.id, input.bookId), eq(books.userId, input.userId)))
         .returning();
 
       if (!book) {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { api } from "~/trpc/react";
+import { useUserId } from "~/hooks/use-user-id";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Label } from "~/components/ui/label";
@@ -34,6 +35,7 @@ const SCHEDULE_TYPES = [
 ];
 
 export default function SchedulePage({ params }: SchedulePageProps) {
+  const { userId, isLoading: userIdLoading } = useUserId();
   const [scheduleType, setScheduleType] = useState<"daily" | "weekly" | "custom">("daily");
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([1, 2, 3, 4, 5]);
   const [releaseTime, setReleaseTime] = useState("09:00");
@@ -50,8 +52,8 @@ export default function SchedulePage({ params }: SchedulePageProps) {
   }, [params]);
 
   const { data: book } = api.book.getBook.useQuery(
-    { bookId, userId: "" }, // We'll get userId from context
-    { enabled: !!bookId }
+    { bookId, userId: userId || "" },
+    { enabled: !!bookId && !!userId }
   );
 
   const { data: existingSchedule } = api.schedule.getSchedule.useQuery(
@@ -151,7 +153,7 @@ export default function SchedulePage({ params }: SchedulePageProps) {
     return preview;
   };
 
-  if (!isParamsReady) {
+  if (!isParamsReady || userIdLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">

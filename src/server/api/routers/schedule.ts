@@ -13,9 +13,10 @@ export const scheduleRouter = createTRPCRouter({
       daysOfWeek: z.array(z.number().min(1).max(7)), // 1-7 (Monday-Sunday)
       releaseTime: z.string(), // HH:MM format
       sectionsPerRelease: z.number().min(1).max(3),
+      seedFirstRelease: z.boolean().optional(),
     }))
     .mutation(async ({ input }) => {
-      return await releaseService.createSchedule({
+      const schedule = await releaseService.createSchedule({
         bookId: input.bookId,
         scheduleType: input.scheduleType,
         daysOfWeek: input.daysOfWeek,
@@ -23,6 +24,17 @@ export const scheduleRouter = createTRPCRouter({
         sectionsPerRelease: input.sectionsPerRelease,
         isActive: true,
       });
+
+      // Seed an immediate release so the user has content right away
+      if (input.seedFirstRelease !== false) {
+        try {
+          await releaseService.createImmediateRelease(schedule);
+        } catch (e) {
+          console.error("Failed to create immediate release:", e);
+        }
+      }
+
+      return schedule;
     }),
 
   // Update release schedule

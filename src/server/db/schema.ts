@@ -14,6 +14,7 @@ import {
   integer,
   numeric,
   time,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 /**
@@ -173,6 +174,10 @@ export const readingProgress = createTable(
     index("reading_progress_book_id_idx").on(t.bookId),
     index("reading_progress_section_id_idx").on(t.sectionId),
     index("reading_progress_release_id_idx").on(t.releaseId),
+    uniqueIndex("reading_progress_user_section_unique").on(
+      t.userId,
+      t.sectionId,
+    ),
   ],
 );
 

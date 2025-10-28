@@ -38,8 +38,8 @@ export default function SettingsPage() {
   useEffect(() => {
     if (existingSettings && isInitialLoad) {
       setTimezone(existingSettings.timezone);
-      setFontSize(existingSettings.readingFontSize);
-      setTheme(existingSettings.readingTheme);
+      setFontSize(existingSettings.readingFontSize as "small" | "medium" | "large");
+      setTheme(existingSettings.readingTheme as "light" | "dark" | "sepia");
       setIsInitialLoad(false);
     } else if (!existingSettings && isInitialLoad) {
       // Auto-detect timezone if no settings exist
@@ -138,7 +138,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="font-size">Font Size</Label>
-                <Select value={fontSize} onValueChange={setFontSize}>
+                <Select value={fontSize} onValueChange={(value) => setFontSize(value as "small" | "medium" | "large")}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -152,7 +152,7 @@ export default function SettingsPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="theme">Theme</Label>
-                <Select value={theme} onValueChange={setTheme}>
+                <Select value={theme} onValueChange={(value) => setTheme(value as "light" | "dark" | "sepia")}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

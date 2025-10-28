@@ -37,11 +37,15 @@ const errorHandlingLink: TRPCLink<AppRouter> = () => {
           observer.next(value);
         },
         error(error) {
-          // Log error for debugging
+          // Log error for debugging (include message/code/stack when available)
+          const anyErr = error as any;
           console.error("tRPC Error:", {
             path: op.path,
             input: op.input,
-            error: error,
+            message: anyErr?.message,
+            code: anyErr?.data?.code,
+            shape: anyErr?.shape,
+            cause: anyErr?.cause,
           });
 
           // Handle specific error types

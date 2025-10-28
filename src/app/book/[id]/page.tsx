@@ -50,6 +50,14 @@ export default function BookDetailPage({ params }: BookDetailPageProps) {
     { enabled: !!bookId }
   );
 
+  // Get user's available releases and pick the latest for this book
+  const { data: availableReleases } = api.schedule.getAvailableReleases.useQuery(
+    { userId: userId || "" },
+    { enabled: !!userId }
+  );
+
+  const latestBookRelease = availableReleases?.find(r => r.bookId === bookId);
+
   const { data: progress } = api.progress.getBookProgress.useQuery(
     { userId: userId || "", bookId },
     { enabled: !!userId && !!bookId }
@@ -70,8 +78,8 @@ export default function BookDetailPage({ params }: BookDetailPageProps) {
   };
 
   const handleStartReading = () => {
-    // Redirect to reading page or show available releases
-    window.location.href = `/read/${bookId}`;
+    if (!latestBookRelease) return;
+    window.location.href = `/read/${latestBookRelease.id}`;
   };
 
   if (userIdLoading || bookLoading || !isParamsReady) {
@@ -304,7 +312,7 @@ export default function BookDetailPage({ params }: BookDetailPageProps) {
                 <Button
                   className="w-full"
                   onClick={handleStartReading}
-                  disabled={book.status !== "ready" && book.status !== "active"}
+                  disabled={!(book.status === "ready" || book.status === "active") || !latestBookRelease}
                 >
                   <Play className="h-4 w-4 mr-2" />
                   Start Reading

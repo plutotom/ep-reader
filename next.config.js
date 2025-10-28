@@ -81,4 +81,5 @@ const config = {
   },
 };
 
+// @ts-expect-error - next-pwa types are for an older version of Next.js
 export default withPWA(config);
